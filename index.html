@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A ten-adversary conversion pre-mortem of the Teacher Transition 7-day trial page: 10 P0 findings and 52 itemized fixes.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Teacher Transition Teardown">
+<meta property="og:description" content="A ten-adversary conversion pre-mortem of the Teacher Transition 7-day trial page: 10 P0 findings and 52 itemized fixes.">
+<style>
+  html{color-scheme:light dark;}
+  body{margin:0;}
+  img{max-width:100%;}
+  [hidden]{display:none!important;}
+</style>
+<title>Teacher Transition Teardown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F4F6F8;
+    --surface:#FFFFFF;
+    --surface-2:#EDF0F4;
+    --ink:#14181F;
+    --ink-2:#3C4654;
+    --muted:#6B7685;
+    --rule:#D7DDE5;
+    --rule-soft:#E6EAF0;
+    --accent:#28387A;
+    --accent-soft:#E7EAF6;
+    --p0:#A8201A;
+    --p0-soft:#F7E7E5;
+    --p1:#8A5410;
+    --p1-soft:#F8EEDF;
+    --p2:#4C5866;
+    --p2-soft:#E9ECF1;
+    --good:#0F5C4E;
+    --good-soft:#E2EFEB;
+    --shadow:0 1px 2px rgba(20,24,31,.05), 0 8px 24px -16px rgba(20,24,31,.25);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#101319;
+      --surface:#171B23;
+      --surface-2:#1E232C;
+      --ink:#E9ECF1;
+      --ink-2:#BAC3CF;
+      --muted:#8B95A3;
+      --rule:#2B313B;
+      --rule-soft:#232833;
+      --accent:#93A4E4;
+      --accent-soft:#1D2338;
+      --p0:#F09189;
+      --p0-soft:#2E1B19;
+      --p1:#E0B36A;
+      --p1-soft:#2B2317;
+      --p2:#9AA5B3;
+      --p2-soft:#20252E;
+      --good:#6FC3AE;
+      --good-soft:#15251F;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#101319;
+    --surface:#171B23;
+    --surface-2:#1E232C;
+    --ink:#E9ECF1;
+    --ink-2:#BAC3CF;
+    --muted:#8B95A3;
+    --rule:#2B313B;
+    --rule-soft:#232833;
+    --accent:#93A4E4;
+    --accent-soft:#1D2338;
+    --p0:#F09189;
+    --p0-soft:#2E1B19;
+    --p1:#E0B36A;
+    --p1-soft:#2B2317;
+    --p2:#9AA5B3;
+    --p2-soft:#20252E;
+    --good:#6FC3AE;
+    --good-soft:#15251F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:"Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size:17px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding-inline:20px;
+    padding-block:48px 96px;
+  }
+  h1,h2,h3,h4,.ui{font-family:"Archivo","Helvetica Neue",Arial,sans-serif;}
+  h1,h2,h3,h4{text-wrap:balance;margin:0;}
+  p{margin:0;}
+  code,.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;}
+
+  .eyebrow{
+    font-family:"Archivo",sans-serif;
+    font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  /* ---------- masthead ---------- */
+  .mast{display:flex;flex-direction:column;gap:18px;padding-bottom:28px;border-bottom:2px solid var(--ink);}
+  .mast h1{font-size:clamp(30px,5.4vw,46px);font-weight:700;letter-spacing:-.022em;line-height:1.06;}
+  .mast .sub{color:var(--ink-2);font-size:19px;max-width:62ch;}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px 24px;margin-top:4px;}
+  .meta div{padding:8px 0;border-top:1px solid var(--rule-soft);}
+  .meta dt{font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 2px;}
+  .meta dd{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.4;}
+  .meta dd a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px;}
+
+  /* ---------- verdict ---------- */
+  .verdict{
+    display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;
+    background:var(--surface);border:1px solid var(--rule);border-left:5px solid var(--p0);
+    border-radius:3px;padding:26px 28px;margin-top:36px;box-shadow:var(--shadow);
+  }
+  .score{display:flex;align-items:baseline;gap:3px;font-family:"Archivo",sans-serif;color:var(--p0);}
+  .score b{font-size:76px;font-weight:700;line-height:.86;letter-spacing:-.04em;font-variant-numeric:tabular-nums;}
+  .score span{font-size:19px;font-weight:600;color:var(--muted);}
+  .verdict .label{margin-bottom:8px;}
+  .verdict h2{font-size:24px;font-weight:700;letter-spacing:-.01em;color:var(--p0);}
+  .verdict p{font-size:15.5px;color:var(--ink-2);margin-top:8px;max-width:52ch;}
+
+  /* ---------- score strip ---------- */
+  .strip{margin-top:20px;background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:20px 24px 16px;}
+  .strip-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+  .strip-head p{font-size:13.5px;color:var(--muted);}
+  .bars{display:flex;flex-direction:column;gap:5px;}
+  .bar{display:grid;grid-template-columns:minmax(96px,150px) 1fr 34px;gap:10px;align-items:center;font-size:12.5px;}
+  .bar .who{font-family:"Archivo",sans-serif;font-weight:500;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar .track{height:9px;background:var(--surface-2);border-radius:2px;overflow:hidden;}
+  .bar .fill{height:100%;background:var(--p2);border-radius:2px;}
+  .bar.max .fill{background:var(--p0);}
+  .bar.max .who{color:var(--p0);font-weight:600;}
+  .bar .n{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums;}
+  .bar.max .n{color:var(--p0);font-weight:500;}
+  .strip small{display:block;margin-top:12px;font-size:12px;color:var(--muted);font-family:"Archivo",sans-serif;}
+
+  /* ---------- sections ---------- */
+  section{margin-top:56px;}
+  .sec-head{display:flex;align-items:baseline;gap:14px;padding-bottom:10px;border-bottom:1px solid var(--rule);margin-bottom:24px;flex-wrap:wrap;}
+  .sec-head h2{font-size:23px;font-weight:700;letter-spacing:-.012em;}
+  .sec-head .count{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted);}
+  .lede{font-size:17.5px;color:var(--ink-2);max-width:66ch;}
+  .lede + .lede{margin-top:14px;}
+  .lede strong{color:var(--ink);font-weight:600;}
+
+  /* ---------- findings ---------- */
+  .findings{display:flex;flex-direction:column;gap:20px;}
+  .find{
+    background:var(--surface);border:1px solid var(--rule);
+    border-left:4px solid var(--p0);border-radius:3px;padding:22px 24px;
+  }
+  .find.p1{border-left-color:var(--p1);}
+  .find.p2{border-left-color:var(--p2);}
+  .find-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px;}
+  .chip{
+    font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:3px 8px;border-radius:2px;
+    background:var(--p0-soft);color:var(--p0);
+  }
+  .p1 .chip{background:var(--p1-soft);color:var(--p1);}
+  .p2 .chip{background:var(--p2-soft);color:var(--p2);}
+  .consensus{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--muted);}
+  .find h3{font-size:19px;font-weight:600;letter-spacing:-.008em;line-height:1.3;}
+  .find .body{margin-top:12px;display:flex;flex-direction:column;gap:11px;}
+  .find .body p{font-size:16px;color:var(--ink-2);}
+  .loc{
+    font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.55;
+    background:var(--surface-2);border-radius:2px;padding:9px 11px;color:var(--ink-2);
+    overflow-x:auto;
+  }
+  .loc b{color:var(--ink);font-weight:500;}
+  .fix{border-top:1px dashed var(--rule);padding-top:11px;}
+  .fix .tag, .steel .tag{
+    font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.11em;
+    text-transform:uppercase;color:var(--accent);display:block;margin-bottom:5px;
+  }
+  .steel .tag{color:var(--muted);}
+  .fix p{font-size:15.5px;}
+  .quote{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.6;color:var(--ink);
+    background:var(--accent-soft);border-radius:2px;padding:10px 12px;display:block;margin-top:7px;}
+  .steel{border-top:1px dashed var(--rule);padding-top:11px;}
+  .steel p{font-size:14.5px;color:var(--muted);}
+  .princ{font-family:"Archivo",sans-serif;font-size:12.5px;color:var(--muted);border-top:1px dashed var(--rule);padding-top:10px;}
+  .princ b{color:var(--ink-2);font-weight:600;}
+
+  /* compact findings for P1/P2 */
+  .compact{display:flex;flex-direction:column;gap:14px;}
+  .compact .find{padding:17px 20px;}
+  .compact .find h3{font-size:17px;}
+  .compact .find .body p{font-size:15.5px;}
+
+  /* ---------- fix list ---------- */
+  .fixlist{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:26px 28px;}
+  .fixgroup + .fixgroup{margin-top:24px;padding-top:22px;border-top:1px solid var(--rule-soft);}
+  .fixgroup h4{font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:11px;}
+  .fixgroup ol{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:8px;}
+  .fixgroup li{display:grid;grid-template-columns:30px 1fr;gap:10px;font-size:15.5px;color:var(--ink-2);}
+  .fixgroup li::before{
+    content:counter(list-item);font-family:"JetBrains Mono",monospace;font-size:12.5px;
+    color:var(--muted);text-align:right;padding-top:3px;font-variant-numeric:tabular-nums;
+  }
+  .fixlist ol{counter-reset:none;}
+
+  /* ---------- survives ---------- */
+  .survives{background:var(--good-soft);border:1px solid var(--rule);border-left:4px solid var(--good);border-radius:3px;padding:22px 24px;}
+  .survives ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;}
+  .survives li{font-size:15.5px;color:var(--ink-2);}
+  .survives li::marker{color:var(--good);}
+
+  /* ---------- roster table ---------- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;background:var(--surface);}
+  table{border-collapse:collapse;width:100%;min-width:640px;}
+  th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--rule-soft);vertical-align:top;}
+  th{font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);background:var(--surface-2);}
+  tr:last-child td{border-bottom:none;}
+  td.n{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums;font-size:14px;width:1%;white-space:nowrap;}
+  td.who{font-family:"Archivo",sans-serif;font-weight:500;font-size:14px;line-height:1.35;}
+  td.who em{display:block;font-family:"Source Serif 4",serif;font-style:italic;font-weight:400;font-size:13px;color:var(--muted);}
+  td.v{font-size:14.5px;color:var(--ink-2);}
+  tr.top td.n, tr.top td.who{color:var(--p0);}
+
+  /* ---------- notes ---------- */
+  .notes{display:flex;flex-direction:column;gap:14px;}
+  .note{border-left:2px solid var(--rule);padding-left:16px;}
+  .note h4{font-family:"Archivo",sans-serif;font-size:14px;font-weight:600;margin-bottom:4px;}
+  .note p{font-size:15px;color:var(--ink-2);}
+
+  .closing{background:var(--surface);border:1px solid var(--rule);border-top:3px solid var(--accent);border-radius:3px;padding:24px 26px;}
+  .closing p{font-size:16.5px;color:var(--ink-2);}
+  .closing p + p{margin-top:10px;}
+
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);font-family:"Archivo",sans-serif;font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+
+  @media (max-width:640px){
+    body{font-size:16px;}
+    .verdict{grid-template-columns:1fr;gap:16px;}
+    .score b{font-size:60px;}
+    .bar{grid-template-columns:1fr 34px;}
+    .bar .track{grid-column:1 / -1;order:3;}
+    .fixlist,.find,.survives,.closing,.strip{padding-inline:17px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+  a:focus-visible,:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <p class="eyebrow">Red Team / Conversion Pre-Mortem</p>
+      <h1>Teacher Transition: the 7-day trial page</h1>
+    </div>
+    <p class="sub">Ten adversaries attacked this page independently. Six in-market teacher buyers carrying distinct psychological priors, three conversion-mechanics auditors, and one legal and PR risk floor. No adversary saw another's output.</p>
+    <dl class="meta">
+      <div><dt>Asset</dt><dd><a href="https://teachertransition.com/become-a-member-trial-1">teachertransition.com/become-a-member-trial-1</a></dd></div>
+      <div><dt>Reviewed</dt><dd>15 September 2026</dd></div>
+      <div><dt>Offer</dt><dd>Card-required 7-day trial, auto-renews at $47/month</dd></div>
+      <div><dt>Audience</dt><dd>US K-12 teachers, already free-tier Job Board users</dd></div>
+      <div><dt>Brand context</dt><dd>External, no brand profile loaded</dd></div>
+      <div><dt>Findings</dt><dd>10 P0, 11 P1, 7 P2, 52 itemized fixes</dd></div>
+    </dl>
+  </header>
+
+  <div class="verdict">
+    <div class="score"><b>94</b><span>/100</span></div>
+    <div>
+      <p class="eyebrow label">Shipping recommendation</p>
+      <h2>Do not ship</h2>
+      <p>The synthesizer takes the maximum adversary score, never the average. One broken dimension is enough to sink a page regardless of how the others performed.</p>
+    </div>
+  </div>
+
+  <div class="strip">
+    <div class="strip-head">
+      <p class="eyebrow">Kill score by adversary</p>
+      <p>Scores ran 86 to 94. Ten independent attacks, no shared context.</p>
+    </div>
+    <div class="bars">
+      <div class="bar max"><span class="who">Researcher</span><span class="track"><span class="fill" style="width:94%"></span></span><span class="n">94</span></div>
+      <div class="bar"><span class="who">Price-Anxious</span><span class="track"><span class="fill" style="width:93%"></span></span><span class="n">93</span></div>
+      <div class="bar"><span class="who">Risk-Averse</span><span class="track"><span class="fill" style="width:92%"></span></span><span class="n">92</span></div>
+      <div class="bar"><span class="who">Spouse-Veto</span><span class="track"><span class="fill" style="width:91%"></span></span><span class="n">91</span></div>
+      <div class="bar"><span class="who">Legal / PR floor</span><span class="track"><span class="fill" style="width:88%"></span></span><span class="n">88</span></div>
+      <div class="bar"><span class="who">Comparison-Shopper</span><span class="track"><span class="fill" style="width:88%"></span></span><span class="n">88</span></div>
+      <div class="bar"><span class="who">Newly-Burned</span><span class="track"><span class="fill" style="width:88%"></span></span><span class="n">88</span></div>
+      <div class="bar"><span class="who">Promise-Proof</span><span class="track"><span class="fill" style="width:87%"></span></span><span class="n">87</span></div>
+      <div class="bar"><span class="who">Objection-Stack</span><span class="track"><span class="fill" style="width:86%"></span></span><span class="n">86</span></div>
+      <div class="bar"><span class="who">Decision-Moment</span><span class="track"><span class="fill" style="width:86%"></span></span><span class="n">86</span></div>
+    </div>
+    <small>Any issue raised independently by three or more adversaries is auto-elevated to P0.</small>
+  </div>
+
+  <section>
+    <div class="sec-head"><h2>What actually happened</h2></div>
+    <p class="lede">The dominant failure is singular and structural. <strong>This page asks for a credit card and refuses to say what it costs until the reader has scrolled 9.5 mobile screens, then makes its one price statement conditional on a coupon that does not exist anywhere on the page or in the signup modal.</strong></p>
+    <p class="lede">Everything else compounds that. The page makes 55 promises and carries zero checkable proof for any of them: no testimonial, no customer name, no outcome number, no employer, no founder identity, no demonstration, no comparison. Nine of ten proof types are entirely absent. The tenth, the guarantee, contradicts itself inside a single card.</p>
+    <p class="lede">It then strips every reassurance it did build at the exact screen where the buyer commits, and asks for a phone number before it will show a payment option, to an audience whose live fear is being funnelled into a coaching sales call.</p>
+    <p class="lede">None of this is a polish problem. Every adversary reached the same place from a different direction.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>P0: fix before ship</h2><span class="count">10 findings</span></div>
+    <div class="findings">
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-1</span><span class="consensus">flagged by 10 of 10</span></div>
+        <h3>The core promise is conditional on a coupon that does not exist</h3>
+        <div class="body">
+          <p class="loc"><b>S5 fine print</b> &middot; "You'll pay $0 today when the coupon is applied."</p>
+          <p>No coupon is shown, named, auto-applied or enterable anywhere on the page, and modal step 1 has no coupon field. The literal reading is that the buyer pays $0 today only if a condition she cannot see or satisfy is met. Read that way, the default state is a $47 charge today. It is the last sentence before the final CTA, and it converts the only reassuring number on the page into a new risk.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Delete the conditional. If no coupon gates the trial:</p>
+            <code class="quote">You pay $0 today. There is no code to enter and nothing to apply. Your card is stored and is not charged during the 7-day trial.</code>
+            <p style="margin-top:8px">If a coupon genuinely gates it, show it applied in the modal: <span class="mono">Coupon [CODE] applied. Today's total: $0.00</span></p>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Drop the free trial entirely and sell a transparent discounted first month, for example $9 then $47, with the price in the hero. The negative-option surface collapses, the coupon defect disappears, and a small real payment filters for intent rather than for willingness to store a card.</p></div>
+          <p class="princ"><b>Principle:</b> FTC Act Section 5 deception exposure on conditional price claims. Risk-reversal integrity: a guarantee with an unmet condition is not a guarantee.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-2</span><span class="consensus">flagged by 10 of 10</span></div>
+        <h3>The price appears once, in grey, below the last CTA, 9.5 screens after the first ask</h3>
+        <div class="body">
+          <p class="loc"><b>S5 fine print</b> &middot; measured: "$47" appears exactly once on the page &middot; mobile page height 7,704px against an 812px viewport</p>
+          <p>A page that requires a card and withholds the number until after the ask reads as concealment, not as an offer. Any buyer converting from the first CTA commits without ever seeing the recurring charge. On a $45K to $65K salary, $47 a month is a real monthly line item, and this buyer scans for a number before she reads a word.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Put the full terms in body-size, body-color type directly beneath every CTA, and add a sticky mobile bar.</p>
+            <code class="quote">$0 today. A card is required to start. On day 8 your card is charged $47/month unless you cancel first. Cancel in [N] clicks from your account.</code>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Put the price in the H1 and lead with it: "$47 a month. Here is exactly what it buys." A product-aware free user is blocked on terms, not on desire.</p></div>
+          <p class="princ"><b>Principle:</b> Negative-option clear-and-conspicuous disclosure before billing information is obtained. ROSCA, FTC Act Section 5, state ARL-type statutes, applicability jurisdiction-dependent.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-3</span><span class="consensus">flagged by 10 of 10</span></div>
+        <h3>The conversion modal deletes every term the page spent 7,704px establishing</h3>
+        <div class="body">
+          <p class="loc"><b>CTA modal, step 1 of 2</b> &middot; verified: no price, no "$0 today", no mention of 7 days, no cancellation language, no coupon field</p>
+          <p>Anxiety peaks where the card field is, and this is the only screen with no reassurance on it. The buyer arrives carrying the price question and the modal re-opens it instead of closing it. Every converting visitor passes through this screen.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Persistent terms block at the top of both modal steps, plus an unchecked, unbundled consent checkbox gating the button.</p>
+            <code class="quote">7-day free trial. Today: $0.00. First charge: $47.00 on [TRIAL_END_DATE]. Then $47.00 monthly until you cancel. Cancel in [N] clicks from Account, Membership, Cancel.</code>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Replace the modal with a real checkout page, which has to show a price by construction and cannot become a terms-free corridor.</p></div>
+          <p class="princ"><b>Principle:</b> Point-of-action assurance. Affirmative consent to the negative-option feature, obtained separately from other terms.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-4</span><span class="consensus">flagged by 8 of 10</span></div>
+        <h3>A phone number is required before the page will show payment options</h3>
+        <div class="body">
+          <p class="loc"><b>Modal step 1, field 3</b> &middot; country selector plus "Phone Number...", above "Continue to Payment Options"</p>
+          <p>This audience has been worked by teacher-exit coaching operations whose entire funnel is a booked call. A phone field on a self-serve $47 software trial, collected before a price is shown, reads as sales-call capture and confirms the grift hypothesis at the worst possible moment. It is also a TCPA exposure: a bare unlabelled field produces no consent record, and TCPA is a private-right-of-action area.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Delete the field from step 1. If it is kept, label it, mark it optional, state its single purpose, and add a separate unchecked marketing-consent checkbox.</p>
+            <code class="quote">Mobile number (optional). Used only to text your day-5 trial reminder. No sales calls. Consent is not a condition of starting your trial.</code>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Pre-fill name and email for logged-in free-tier users and collect nothing at step 1 at all, since the page's own traffic assumption is that these people already have accounts.</p></div>
+          <p class="princ"><b>Principle:</b> Form-friction minimization. TCPA prior-express-written-consent standard for marketing calls and texts to mobile numbers.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-5</span><span class="consensus">flagged by 7 of 10</span></div>
+        <h3>The page orders you to cancel twice and never says how, and never promises to warn you</h3>
+        <div class="body">
+          <p class="loc"><b>S3 card 6</b> &middot; "cancel before the trial ends and pay nothing" &nbsp;|&nbsp; <b>S5 fine print</b> &middot; "Unless you cancel before the end of your 7-day trial" &middot; no mechanism stated anywhere, no pre-charge reminder promised anywhere</p>
+          <p>For a buyer whose actual trauma is forgetting, an uninstructed cancel is a trap, not a guarantee. "Cancel before the trial ends" with no method means email support and wait, which is exactly how people get charged three months running. The deadline also has no date, no clock time and no timezone, so it cannot go into a calendar.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Promote cancellation out of the feature grid into a bordered box above both CTAs.</p>
+            <code class="quote">How you cancel, in plain words. Log in. Click Billing. Click Cancel Membership. [N] clicks. No email to support, no phone call. We email you on day 5 and the cancel link is the first line. Your trial runs through [DATE] at 11:59pm [TZ]. Cancel before then and you are charged nothing, ever.</code>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Remove the card requirement entirely: email-only trial, ask for payment on day 7 once the product has produced something. The cancellation fear stops existing.</p></div>
+          <p class="princ"><b>Principle:</b> Simple-cancellation requirement under FTC negative option rulemaking and state ARL-type statutes. Risk-reversal specificity.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-6</span><span class="consensus">flagged by 10 of 10</span></div>
+        <h3>Zero proof of any kind, on a page selling a career change</h3>
+        <div class="body">
+          <p class="loc"><b>Whole page body, S1 to S5</b> &middot; verified: zero testimonials, zero customer names, zero quotes, zero photos of real customers, zero employer names, zero outcome numbers, zero third-party validation &middot; "Testimonials" exists only as a footer link pointing off-page</p>
+          <p>The page makes 55 promises and substantiates none. The proof the company demonstrably owns is one click away and was left there, while the footer simultaneously boasts "thousands of teachers" and promises "inspiring success stories" the page itself does not carry. Every competing option in this buyer's tab stack, including a subreddit thread, has named humans attached.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Insert a proof band between the feature grid and the final CTA: three named members with photo, subject and years taught, the exact role and employer landed, elapsed time to offer, and a verbatim quote naming the tool used. Then one counted line with a stated denominator:</p>
+            <code class="quote">Of the [COHORT_N] members who joined between [DATES], [N] reported accepting a non-classroom role. Self-reported, [RESPONSE_PCT]% survey response. Non-responders are not counted as placements. Method: [LINK].</code>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Replace the whole page with one named teacher telling one story at length: resume before and after, roles applied to, the offer letter, with the CTA three times inside the story and nothing else on the page.</p></div>
+          <p class="princ"><b>Principle:</b> Cialdini consensus, absent entirely, with the proof demonstrably existing off-page.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-7</span><span class="consensus">flagged by 9 of 10</span></div>
+        <h3>The most personal section on the page is signed by nobody</h3>
+        <div class="body">
+          <p class="loc"><b>S4</b> &middot; "What I want you to do during these 7 days" closing into "We'll help you explore the tools throughout your trial" &middot; verified: no founder name, face, signature or bio anywhere in the page body</p>
+          <p>A first-person request for the buyer's week and her card, from a person who will not give a name, then switching to "we" inside eight lines. In a category with a live public scam takedown, an unattributed "I" is not neutral, it is the tell. It converts the page's best-written section into evidence for the objection the page most needs to beat.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Byline block at the top of S4 with a headshot, holding first person singular through the whole section, and signed.</p>
+            <code class="quote">[FOUNDER FULL NAME], [SUBJECT] teacher for [N] years in [DISTRICT, STATE], left the classroom in [YEAR], founder of Teacher Transition. [LinkedIn] | [direct email]</code>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Rewrite S4 in plain third person as a trial plan. An unattributed personal appeal has less credibility than the same content written impersonally.</p></div>
+          <p class="princ"><b>Principle:</b> Cialdini authority. An unattributed personal appeal has no authority to transfer.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-8</span><span class="consensus">flagged by 10 of 10</span></div>
+        <h3>The AI resume card carries the wrong product's copy, live</h3>
+        <div class="body">
+          <p class="loc"><b>S3 feature card 3, "AI resume &amp; cover tools"</b> &middot; body reads "See every curated role, not just free listings. Filter by remote, salary, experience fit, and roles that value educators." &middot; verbatim duplicate of card 1, says nothing about resumes or cover letters</p>
+          <p>It sits two rows under the words "Here's exactly what your free trial unlocks". The one feature that has to beat free ChatGPT describes a job-board filter instead, so the differentiator is deleted. And a visible copy-paste defect on the page that captures credit cards transfers directly onto the buyer's expectation of how a cancellation request gets handled.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Describe the tool's real output, and add a real before-and-after beneath the grid.</p>
+            <code class="quote">Paste your teaching resume and the job posting you want. In about [T] minutes you get a rewritten resume in that posting's own language, plus a cover letter draft, editable and downloadable as .docx.</code>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Cut the feature grid entirely and show the tool's actual output as the section. A demonstration of one rewritten bullet outsells six cards.</p></div>
+          <p class="princ"><b>Principle:</b> Hopkins specificity. Credibility collapse on visible defects.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-9</span><span class="consensus">flagged by 7 of 10</span></div>
+        <h3>The page never states the one thing its audience came to find out</h3>
+        <div class="body">
+          <p class="loc"><b>Whole page</b> &middot; no free-versus-paid comparison, no pricing block, no counts on either side &middot; "curated" used 4 times, never quantified &middot; not one example role anywhere</p>
+          <p>The page's own eyebrow says the reader has already used the free Job Board. That reader has exactly one question: what does $47 buy that $0 does not. The page answers with "a taste" versus "the tools". There is no role count, no sourcing method, no refresh cadence, no geography and no salary band on the page.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>A two-column table in the S2 position: roles visible, new roles per week, filters, fit scoring, resume rewrites, cover letter drafts, job tracker, job alerts, price. A real number in every paid cell, pulled from the live board. Followed by three real currently-listed roles at legible size with title, employer type, salary band and remote flag.</p>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Show the inventory instead of describing it. A live scrollable feed of ten real roles, with roles eleven onward blurred behind the trial gate, answers the question in four seconds.</p></div>
+          <p class="princ"><b>Principle:</b> Schwartz awareness mismatch. The page writes Problem-Aware copy to a Product-Aware audience.</p>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top"><span class="chip">P0-10</span><span class="consensus">flagged by 8 of 10</span></div>
+        <h3>Two CTAs across 9.5 mobile screens, and the first one is below the fold</h3>
+        <div class="body">
+          <p class="loc"><b>Whole page</b> &middot; measured: 2 CTA instances, 7,704px page height against an 812px viewport &middot; at 375px the H1 alone runs about 5 lines, the hero CTA falls below the first fold, and the hero product image renders below the CTA</p>
+          <p>One ask per 4.75 screens. Every reader convinced at the feature grid or the founder section has to scroll four more screens to act. On mobile the first screen is headline text with no button and no product, so the buyer is asked before she is shown.</p>
+          <div class="fix"><span class="tag">Replacement</span>
+            <p>Shorten the H1 to two lines at 375px and reorder the mobile hero to headline, image, subhead, CTA, terms. Add a sticky bottom bar from 900px scroll depth carrying the price plus the button. Add inline CTAs after the comparison table, the feature grid and the proof band.</p>
+          </div>
+          <div class="steel"><span class="tag">Steelman of the opposite</span><p>Kill the landing page and fire an in-product upgrade prompt on a gated action inside the free board, at the moment of blocked intent. The proof is then the user's own locked result set.</p></div>
+          <p class="princ"><b>Principle:</b> Conversion-path continuity. The ask must be present at every point the decision can be made.</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>P1: high priority</h2><span class="count">11 findings</span></div>
+    <div class="compact">
+      <article class="find p1"><div class="find-top"><span class="chip">P1-1</span></div><h3>S2 spends the page's best slot arguing for the free product</h3><div class="body"><p>The section argues that generic job boards fail teachers, to an audience that already signed up for this company's teacher job board, then praises the Teacher Transition Job Board, which is the free tier. Net effect: it argues the free tier is sufficient. Replace it with the P0-9 comparison table.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-2</span></div><h3>"Cancel anytime" contradicts its own body</h3><div class="body"><p>S3 card 6's title promises cancellation at any time. Its body narrows it to a 7-day window with a payment consequence. Retitle to "Cancel in [N] clicks" and state the mechanism.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-3</span></div><h3>"Complete Your Enrollment" contradicts the whole offer</h3><div class="body"><p>The modal's second tab label is a platform default left unedited. "Enrollment" means a roster and a term to someone who has spent nineteen years in schools. Rename to "Your details" and "Card details ($0 charged today)".</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-4</span></div><h3>The hero sells two features the page never delivers</h3><div class="body"><p>Floating labels "Job Alerts" and "Membership Resources / Guides and Templates" appear in the hero image and are never mentioned again, including in the section headed "exactly what your free trial unlocks". Add cards for both, or strip the labels.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-5</span></div><h3>The only number on the page is unlabeled, and sits next to a zero</h3><div class="body"><p>The hero mockup shows "3441" with no legible label beside "Applications: 0", plus a greeting to a user named Oscar. Label the count, populate the tracker state, and use a name matching the audience.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-6</span></div><h3>No refund text on the page</h3><div class="body"><p>Only a footer link and a modal link. Put the actual policy on the page in the CTA block, and commit to a post-enrolment confirmation email restating every material term.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-7</span></div><h3>Silence on data handling for a product that ingests resumes</h3><div class="body"><p>No statement about retention, sharing, third-party model processing, training use or deletion, on a page whose core feature requires uploading a full employment history. A currently-employed teacher carries professional exposure risk. Add the line where the resume is ingested, plus a confidentiality statement about employer visibility.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-8</span></div><h3>The page de-scopes its own value before the buyer has bought</h3><div class="body"><p>S3 promises "EVERYTHING UNLOCKED FOR 7 DAYS" and S4 answers "You do not need to use every feature." That is post-purchase onboarding content placed before the purchase decision, where it lowers expected value. Move it into the day-1 welcome email and put an FAQ in the slot.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-9</span></div><h3>No FAQ, so every second-order question dead-ends</h3><div class="body"><p>Six questions belong on the page: when exactly am I charged, what if I forget, is my card charged today, how do I cancel, what do I keep if I cancel including my free account, and who sees my information.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-10</span></div><h3>The footer hands the buyer 10 exits plus two easier free conversions</h3><div class="body"><p>"Free Quiz", "Our Courses", "Our Membership", "Blog", "Testimonials", plus a newsletter button placed after the final CTA. A risk-averse buyer choosing between a $47 recurring charge and a free quiz takes the quiz. Strip to Login, Privacy Policy, Refund Policy, Terms and Conditions.</p></div></article>
+      <article class="find p1"><div class="find-top"><span class="chip">P1-11</span></div><h3>The pay-cut fear is never addressed</h3><div class="body"><p>The word "salary" appears once, as a filter name. Nothing states what the destination roles pay. The household objection underneath this entire purchase is whether leaving teaching costs income, and the page talks only about money the buyer spends.</p></div></article>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>P2: polish</h2><span class="count">7 findings</span></div>
+    <div class="compact">
+      <article class="find p2"><div class="find-top"><span class="chip">P2-1</span></div><h3>Tab title is an internal build label</h3><div class="body"><p>"Job Search Dashboard Signup" is the bookmark, the background-tab label and the link preview. Rewrite to "Teacher Transition Membership: 7 days free, then $47/month".</p></div></article>
+      <article class="find p2"><div class="find-top"><span class="chip">P2-2</span></div><h3>Five em dashes in customer-facing copy, one of them breaking the offer</h3><div class="body"><p>At 375px the H1 renders as "7 days" plus a dangling dash on one line, with "free." orphaned on the next. Sweep all five.</p></div></article>
+      <article class="find p2"><div class="find-top"><span class="chip">P2-3</span></div><h3>"Join thousands of teachers" is unquantified and promises stories the page lacks</h3><div class="body"><p>State a figure the company can produce on demand, or drop the number. Remove the "inspiring success stories" promise unless real consented testimonials ship with it.</p></div></article>
+      <article class="find p2"><div class="find-top"><span class="chip">P2-4</span></div><h3>Placeholder-only form fields</h3><div class="body"><p>Labels vanish the moment the buyer starts typing. Add visible labels above all inputs.</p></div></article>
+      <article class="find p2"><div class="find-top"><span class="chip">P2-5</span></div><h3>"100% Secure &amp; Safe Payments" is asserted where no payment is collected</h3><div class="body"><p>It answers card-theft anxiety, which is not the fear on this page, and it names no processor. Replace with "Payments processed by [NAMED PROCESSOR]. We never see or store your card number."</p></div></article>
+      <article class="find p2"><div class="find-top"><span class="chip">P2-6</span></div><h3>The S3 stock photo is the category's most contaminated image</h3><div class="body"><p>A woman on a couch with a laptop, seen from behind, is the stock shot most attached to the coaching operations this audience has been warned about. Replace with an annotated capture of the resume rewriter mid-edit.</p></div></article>
+      <article class="find p2"><div class="find-top"><span class="chip">P2-7</span></div><h3>The matching feature has two different names</h3><div class="body"><p>"Personalized matching" in S2 and "Profile-based matching" in S3. One name everywhere, or the reader cannot count features.</p></div></article>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Complete itemized fix list</h2><span class="count">52 fixes</span></div>
+    <p class="lede" style="margin-bottom:22px">Every distinct fix surfaced, by location. Bracketed tokens mark a figure that must come from Teacher Transition's own data. Nothing here invents a number, a name or an outcome on the company's behalf.</p>
+    <div class="fixlist">
+      <div class="fixgroup"><h4>Hero (S1)</h4><ol>
+        <li>Rewrite the H1 to two lines at 375px, remove the em dash, and pull the first CTA above the 812px fold.</li>
+        <li>Add the price and terms line directly beneath the first CTA, in body size and body color.</li>
+        <li>Label the "3441" stat tile with the metric it represents, at a size legible on a 375px viewport, or remove it.</li>
+        <li>Replace the "Applications: 0" empty state with a populated tracker showing real pipeline stages.</li>
+        <li>Change the mockup greeting name from "Oscar" to a name matching the actual audience.</li>
+        <li>Either deliver "Job Alerts" and "Membership Resources / Guides and Templates" in the feature grid, or remove those floating labels from the hero image.</li>
+        <li>Replace the "You already know" flattery opener with a countable statement of what is behind the paywall.</li>
+        <li>On mobile, order the hero as headline, product image, subhead, CTA, terms, so the product is seen before the ask.</li>
+      </ol></div>
+      <div class="fixgroup"><h4>Positioning (S2)</h4><ol start="9">
+        <li>Delete the "generic job boards were not built for you" argument and install the free-versus-paid comparison in that slot.</li>
+        <li>Replace the three text-only pills with named, countable differentiators that a free board cannot also claim.</li>
+        <li>Define "curated" concretely: role count, sourcing method, who screens, screening criteria, refresh cadence, geographic coverage, and the percentage of listings with a posted salary.</li>
+        <li>Add three to six real currently-listed roles with title, employer type, city or Remote, salary band, and one line mapping a teaching skill to the posting's requirement.</li>
+        <li>Add a confidentiality line: whether the buyer's search, profile and resume are visible to employers, and whether a candidate directory exists.</li>
+        <li>Add a salary-reality block naming what the destination roles actually pay, sourced and dated, to answer the pay-cut fear directly.</li>
+      </ol></div>
+      <div class="fixgroup"><h4>Feature grid (S3)</h4><ol start="15">
+        <li>Rewrite card 3's body to describe the resume tool's real output: what it produces, in what format, how long it takes, and whether a human reviews it.</li>
+        <li>Add a real before-and-after of one rewritten resume line, beneath the grid.</li>
+        <li>Rewrite card 2 to state what the matching is computed on and how it differs from a keyword filter.</li>
+        <li>Use one name for the matching feature across the entire page.</li>
+        <li>Quantify card 1 on both sides of the free-versus-paid line.</li>
+        <li>Pull cancellation out of the feature grid into a standalone bordered box above both CTAs, with the literal click path.</li>
+        <li>Rewrite card 5 from onboarding tips into an explicit pre-charge reminder commitment with a named day and a named subject line.</li>
+        <li>Replace the couch-and-laptop stock photo with an annotated real product capture.</li>
+        <li>Add the missing feature cards for job alerts and guides and templates, or remove those claims from the hero.</li>
+        <li>Add the free-versus-paid comparison table if fix 9 is not used.</li>
+      </ol></div>
+      <div class="fixgroup"><h4>Founder section (S4)</h4><ol start="25">
+        <li>Attribute the section to a named, photographed founder with a credential line and a signature.</li>
+        <li>Hold one voice throughout; remove the "I" to "we" switch.</li>
+        <li>Move "You do not need to use every feature" into the day-1 trial welcome email.</li>
+        <li>Put an FAQ answering billing mechanics into the vacated slot.</li>
+      </ol></div>
+      <div class="fixgroup"><h4>Proof (missing section entirely)</h4><ol start="29">
+        <li>Add a proof band with three named members: photo, subject and years taught, exact role and employer landed, elapsed time to offer, and a verbatim quote naming the tool used.</li>
+        <li>Add one counted outcome line with a stated denominator, a stated survey response rate, and an explicit statement that non-responders are not counted as placements.</li>
+        <li>Pull the existing off-page testimonials onto this page and stop routing proof to a footer link.</li>
+      </ol></div>
+      <div class="fixgroup"><h4>Final CTA and fine print (S5)</h4><ol start="32">
+        <li>Delete the coupon conditional and state the $0 unconditionally.</li>
+        <li>Restyle the fine print to body size and body color, and repeat it above both CTAs.</li>
+        <li>Render the charge deadline as an absolute date with clock time and timezone, plus an add-to-calendar link.</li>
+        <li>Put the actual refund terms on the page as readable text.</li>
+        <li>Commit to a post-enrolment confirmation email restating every material term, and send it.</li>
+      </ol></div>
+      <div class="fixgroup"><h4>Conversion modal</h4><ol start="37">
+        <li>Add a persistent terms block at the top of both modal steps: today $0.00, first charge amount and date, monthly renewal, cancel path.</li>
+        <li>Remove the phone field, or label it optional with a stated single purpose plus unbundled consent language.</li>
+        <li>Rename tab 2 from "Complete Your Enrollment" to a trial-accurate label.</li>
+        <li>Rename the button from "Continue to Payment Options" to carry the $0.</li>
+        <li>Add visible field labels above every input.</li>
+        <li>Add an unchecked, unbundled affirmative-consent checkbox gating the continue button.</li>
+        <li>Replace "100% Secure &amp; Safe Payments" with the named payment processor.</li>
+        <li>Add the data-handling line at the point the resume is ingested.</li>
+      </ol></div>
+      <div class="fixgroup"><h4>Structure and global</h4><ol start="45">
+        <li>Add a sticky mobile CTA bar carrying the price, from the moment the hero scrolls out of view.</li>
+        <li>Add inline CTAs after the comparison table, the feature grid and the proof band, four to five total.</li>
+        <li>Strip the footer on this page to Login, Privacy Policy, Refund Policy, Terms and Conditions.</li>
+        <li>Remove the newsletter block, the Free Quiz link, and the "Our Courses" and "Our Membership" links from this page.</li>
+        <li>Quantify or remove "Join thousands of teachers", and remove the "inspiring success stories" promise unless stories ship with it.</li>
+        <li>Rewrite the browser tab title.</li>
+        <li>Sweep the five em dashes.</li>
+        <li>State plainly what the buyer keeps and loses on cancellation, including whether the free Job Board account survives.</li>
+      </ol></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Elements that survive</h2></div>
+    <p class="lede" style="margin-bottom:20px">Fact framing only. These are the elements no adversary could attack.</p>
+    <div class="survives"><ul>
+      <li>The S5 fine print states the renewal amount, the billing interval, the auto-continuation trigger and the payment-method requirement in a single sentence.</li>
+      <li>S3 card 6 and the S5 fine print state the same renewal figure and the same cancel-before-trial-end condition, with no numeric contradiction between them.</li>
+      <li>The trial length is stated as 7 days in the H1, the S3 eyebrow, the S5 heading, both CTA button labels and the fine print, with no conflicting duration anywhere.</li>
+      <li>Both CTA buttons carry identical label text, so the action is named the same way at both instances.</li>
+      <li>All three content images on the page load. None are broken.</li>
+      <li>Privacy Policy, Refund Policy and Terms and Conditions links are present in the footer, and Refund Policy and Terms are repeated inside modal step 1.</li>
+      <li>S4 names the time-scarcity objection and answers it with four concrete alternative goals for the week. It is the only objection on the page answered head-on.</li>
+      <li>S3 card 4 states a mechanism rather than an outcome: one place instead of scattered spreadsheets and browser tabs.</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Adversary breakdown</h2><span class="count">10 attacks</span></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Score</th><th>Adversary</th><th>One-line verdict</th></tr></thead>
+      <tbody>
+        <tr class="top"><td class="n">94</td><td class="who">Researcher<em>Priya, chemistry, department data lead</em></td><td class="v">Three columns to fill, cost, what it provides, evidence it works, and after 7,704px the page filled zero of them.</td></tr>
+        <tr><td class="n">93</td><td class="who">Price-Anxious<em>Dana, 4th grade, $3,100/mo take-home</em></td><td class="v">The only number is a recurring charge in grey fine print 9.5 screens down, gated on a coupon that does not exist.</td></tr>
+        <tr><td class="n">92</td><td class="who">Risk-Averse<em>Karen, 19 years, burned by a subscription</em></td><td class="v">The screen where I hand over my card never says $47, never says 7 days, never says cancel, and calls it enrollment.</td></tr>
+        <tr><td class="n">91</td><td class="who">Spouse-Veto<em>Brittany, second grade, two kids</em></td><td class="v">The only sentence I can take to the kitchen table is "it's $47 a month", and that loses the argument alone.</td></tr>
+        <tr><td class="n">88</td><td class="who">Legal and PR floor<em>Tier C safety net</em></td><td class="v">A card-required negative-option offer whose material terms are absent from the screen that collects the card.</td></tr>
+        <tr><td class="n">88</td><td class="who">Comparison-Shopping<em>Marcus, biology, seven tabs open</em></td><td class="v">Every promise here is one my other six tabs already make, and four of those tabs are free.</td></tr>
+        <tr><td class="n">88</td><td class="who">Newly-Burned<em>Alexis, SpEd, post-scam-thread</em></td><td class="v">First person from a person who will not give a name, asking for my phone before it will give me a price.</td></tr>
+        <tr><td class="n">87</td><td class="who">Promise-Proof Auditor</td><td class="v">55 promises. Zero proven. 33 asserted, 22 orphaned. Nine of ten proof types entirely absent.</td></tr>
+        <tr><td class="n">86</td><td class="who">Objection-Stack Mapper</td><td class="v">Forty objections this buyer carries. One answered head-on, ten hand-waved, twenty-nine ignored.</td></tr>
+        <tr><td class="n">86</td><td class="who">Decision-Moment Walkthrough</td><td class="v">It sells the free product it already gave away and hides the price it will charge.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Review limitations</h2></div>
+    <div class="notes">
+      <div class="note"><h4>External brand, no profile</h4><p>Teacher Transition is not a registered property and has no brand profile, voice guide, VOC file or verified-claims library loaded. The six buyer personas were built from the page's own stated ICP and from general category knowledge, not from the company's own persona definitions. Voice critique is therefore generic direct-response principle, not brand-specific.</p></div>
+      <div class="note"><h4>Modal step 2 was never opened</h4><p>Entering personal data to reach the payment screen was out of scope, so the price display, coupon handling and cancellation language at the actual card step are unverified. If step 2 restates the terms, P0-3 downgrades from critical to major. It does not rescue P0-4 or P1-3.</p></div>
+      <div class="note"><h4>The legal section is a marketer's risk review, not legal advice</h4><p>Findings are stated as exposure and remediation, never as a determination that any law has been broken. Where a statute is named, applicability to this operator is jurisdiction-dependent and is not asserted. No citation, case, penalty figure or enforcement example was invented, and none are cited. Counsel in the operator's jurisdiction reviews before anything ships.</p></div>
+      <div class="note"><h4>No analytics</h4><p>This is a cold read of the live page. No traffic data, conversion rate, trial-start rate, day-8 conversion or churn figure informed any finding.</p></div>
+      <div class="note"><h4>No fabricated data</h4><p>Every replacement that needs a number, a name or an outcome carries a bracketed token naming the datum required. Nothing was invented on this company's behalf.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Next step</h2></div>
+    <div class="closing">
+      <p>Fix P0-1 through P0-5 first. They are all billing-disclosure defects, they are cheap, and four of the five are copy changes. That alone should move the kill score materially.</p>
+      <p>Then build the two missing sections, the free-versus-paid comparison and the proof band, which are the P0s that need real company data before they can be written.</p>
+      <p>Re-run the red team afterwards with fresh adversaries and compare. A round that does not drop the score by at least 15 points means the fixes are not reaching the real problem, which in that case is the card-required trial structure itself.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Red Team &middot; conversion pre-mortem &middot; 15 September 2026</span>
+    <span>10 adversaries &middot; max-severity synthesis &middot; no averaging</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
