@@ -117,7 +117,7 @@
   .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px 24px;margin-top:4px;}
   .meta div{padding:8px 0;border-top:1px solid var(--rule-soft);}
   .meta dt{font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 2px;}
-  .meta dd{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.4;}
+  .meta dd{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.4;overflow-wrap:anywhere;}
   .meta dd a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px;}
 
   /* ---------- verdict ---------- */
@@ -208,12 +208,11 @@
   .fixgroup + .fixgroup{margin-top:24px;padding-top:22px;border-top:1px solid var(--rule-soft);}
   .fixgroup h4{font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:11px;}
   .fixgroup ol{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:8px;}
-  .fixgroup li{display:grid;grid-template-columns:30px 1fr;gap:10px;font-size:15.5px;color:var(--ink-2);}
+  .fixgroup li{display:grid;grid-template-columns:30px 1fr;gap:10px;font-size:15.5px;color:var(--ink-2);counter-increment:fix;}
   .fixgroup li::before{
-    content:counter(list-item);font-family:"JetBrains Mono",monospace;font-size:12.5px;
+    content:counter(fix);font-family:"JetBrains Mono",monospace;font-size:12.5px;
     color:var(--muted);text-align:right;padding-top:3px;font-variant-numeric:tabular-nums;
   }
-  .fixlist ol{counter-reset:none;}
 
   /* ---------- survives ---------- */
   .survives{background:var(--good-soft);border:1px solid var(--rule);border-left:4px solid var(--good);border-radius:3px;padding:22px 24px;}
@@ -503,7 +502,7 @@
     <div class="sec-head"><h2>Complete itemized fix list</h2><span class="count">52 fixes</span></div>
     <p class="lede" style="margin-bottom:22px">Every distinct fix surfaced, by location. Bracketed tokens mark a figure that must come from Teacher Transition's own data. Nothing here invents a number, a name or an outcome on the company's behalf.</p>
     <div class="fixlist">
-      <div class="fixgroup"><h4>Hero (S1)</h4><ol>
+      <div class="fixgroup"><h4>Hero (S1)</h4><ol start="1" style="counter-reset:fix 0">
         <li>Rewrite the H1 to two lines at 375px, remove the em dash, and pull the first CTA above the 812px fold.</li>
         <li>Add the price and terms line directly beneath the first CTA, in body size and body color.</li>
         <li>Label the "3441" stat tile with the metric it represents, at a size legible on a 375px viewport, or remove it.</li>
@@ -513,7 +512,7 @@
         <li>Replace the "You already know" flattery opener with a countable statement of what is behind the paywall.</li>
         <li>On mobile, order the hero as headline, product image, subhead, CTA, terms, so the product is seen before the ask.</li>
       </ol></div>
-      <div class="fixgroup"><h4>Positioning (S2)</h4><ol start="9">
+      <div class="fixgroup"><h4>Positioning (S2)</h4><ol start="9" style="counter-reset:fix 8">
         <li>Delete the "generic job boards were not built for you" argument and install the free-versus-paid comparison in that slot.</li>
         <li>Replace the three text-only pills with named, countable differentiators that a free board cannot also claim.</li>
         <li>Define "curated" concretely: role count, sourcing method, who screens, screening criteria, refresh cadence, geographic coverage, and the percentage of listings with a posted salary.</li>
@@ -521,7 +520,7 @@
         <li>Add a confidentiality line: whether the buyer's search, profile and resume are visible to employers, and whether a candidate directory exists.</li>
         <li>Add a salary-reality block naming what the destination roles actually pay, sourced and dated, to answer the pay-cut fear directly.</li>
       </ol></div>
-      <div class="fixgroup"><h4>Feature grid (S3)</h4><ol start="15">
+      <div class="fixgroup"><h4>Feature grid (S3)</h4><ol start="15" style="counter-reset:fix 14">
         <li>Rewrite card 3's body to describe the resume tool's real output: what it produces, in what format, how long it takes, and whether a human reviews it.</li>
         <li>Add a real before-and-after of one rewritten resume line, beneath the grid.</li>
         <li>Rewrite card 2 to state what the matching is computed on and how it differs from a keyword filter.</li>
@@ -533,25 +532,25 @@
         <li>Add the missing feature cards for job alerts and guides and templates, or remove those claims from the hero.</li>
         <li>Add the free-versus-paid comparison table if fix 9 is not used.</li>
       </ol></div>
-      <div class="fixgroup"><h4>Founder section (S4)</h4><ol start="25">
+      <div class="fixgroup"><h4>Founder section (S4)</h4><ol start="25" style="counter-reset:fix 24">
         <li>Attribute the section to a named, photographed founder with a credential line and a signature.</li>
         <li>Hold one voice throughout; remove the "I" to "we" switch.</li>
         <li>Move "You do not need to use every feature" into the day-1 trial welcome email.</li>
         <li>Put an FAQ answering billing mechanics into the vacated slot.</li>
       </ol></div>
-      <div class="fixgroup"><h4>Proof (missing section entirely)</h4><ol start="29">
+      <div class="fixgroup"><h4>Proof (missing section entirely)</h4><ol start="29" style="counter-reset:fix 28">
         <li>Add a proof band with three named members: photo, subject and years taught, exact role and employer landed, elapsed time to offer, and a verbatim quote naming the tool used.</li>
         <li>Add one counted outcome line with a stated denominator, a stated survey response rate, and an explicit statement that non-responders are not counted as placements.</li>
         <li>Pull the existing off-page testimonials onto this page and stop routing proof to a footer link.</li>
       </ol></div>
-      <div class="fixgroup"><h4>Final CTA and fine print (S5)</h4><ol start="32">
+      <div class="fixgroup"><h4>Final CTA and fine print (S5)</h4><ol start="32" style="counter-reset:fix 31">
         <li>Delete the coupon conditional and state the $0 unconditionally.</li>
         <li>Restyle the fine print to body size and body color, and repeat it above both CTAs.</li>
         <li>Render the charge deadline as an absolute date with clock time and timezone, plus an add-to-calendar link.</li>
         <li>Put the actual refund terms on the page as readable text.</li>
         <li>Commit to a post-enrolment confirmation email restating every material term, and send it.</li>
       </ol></div>
-      <div class="fixgroup"><h4>Conversion modal</h4><ol start="37">
+      <div class="fixgroup"><h4>Conversion modal</h4><ol start="37" style="counter-reset:fix 36">
         <li>Add a persistent terms block at the top of both modal steps: today $0.00, first charge amount and date, monthly renewal, cancel path.</li>
         <li>Remove the phone field, or label it optional with a stated single purpose plus unbundled consent language.</li>
         <li>Rename tab 2 from "Complete Your Enrollment" to a trial-accurate label.</li>
@@ -561,7 +560,7 @@
         <li>Replace "100% Secure &amp; Safe Payments" with the named payment processor.</li>
         <li>Add the data-handling line at the point the resume is ingested.</li>
       </ol></div>
-      <div class="fixgroup"><h4>Structure and global</h4><ol start="45">
+      <div class="fixgroup"><h4>Structure and global</h4><ol start="45" style="counter-reset:fix 44">
         <li>Add a sticky mobile CTA bar carrying the price, from the moment the hero scrolls out of view.</li>
         <li>Add inline CTAs after the comparison table, the feature grid and the proof band, four to five total.</li>
         <li>Strip the footer on this page to Login, Privacy Policy, Refund Policy, Terms and Conditions.</li>
